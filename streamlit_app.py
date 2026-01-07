@@ -3,15 +3,22 @@ from supabase import create_client
 import datetime
 import pandas as pd
 from fpdf import FPDF
-from calendar import monthrange
+from calendar import monthrange, month_name
+import locale
 
 # --- AYARLAR ---
 st.set_page_config(page_title="A-Gala Kassenbuch", page_icon="💰")
 
 # --- 🚀 BAŞLANGIÇ BAKİYESİ (BURAYI DEĞİŞTİR) ---
-# Uygulamayı kullanmaya başladığın andaki ilk ana parayı buraya yaz:
-INITIAL_CASH_BALANCE = 1000.00  # Örn: 1000 Euro ile başladın
+INITIAL_CASH_BALANCE = 1000.00 
 # ----------------------------------------------
+
+# Almanca Ay İsimleri Sözlüğü
+GERMAN_MONTHS = {
+    1: "Januar", 2: "Februar", 3: "März", 4: "April",
+    5: "Mai", 6: "Juni", 7: "Juli", 8: "August",
+    9: "September", 10: "Oktober", 11: "November", 12: "Dezember"
+}
 
 # Supabase Bağlantısı
 url = st.secrets["SUPABASE_URL"]
@@ -38,54 +45,48 @@ with st.form("kayit_formu", clear_on_submit=True):
         supabase.table("muhasebe").insert(data).execute()
         st.success(f"Erfolgreich gespeichert!")
 
-# --- AYLIK RAPORLAMA (MONATSBERICHT) ---
+# --- AYLIK RAPORLAMA VE PDF ---
 st.divider()
 st.subheader("📄 Monatsbericht Erstellen")
 
 today = datetime.date.today()
 col_m, col_y = st.columns(2)
-selected_month = col_m.selectbox("Monat wählen", range(1, 13), index=today.month - 1)
+
+# Ay isimlerini listeden seçtirme
+selected_month_name = col_m.selectbox("Monat wählen", list(GERMAN_MONTHS.values()), index=today.month - 1)
+selected_month = list(GERMAN_MONTHS.keys())[list(GERMAN_MONTHS.values()).index(selected_month_name)]
 selected_year = col_y.selectbox("Jahr wählen", [2025, 2026], index=0)
 
-# Ayın aralığını hesapla
 start_date = datetime.date(selected_year, selected_month, 1)
 last_day = monthrange(selected_year, selected_month)[1]
 end_date = datetime.date(selected_year, selected_month, last_day)
 
 if st.button("PDF Bericht Generieren"):
     # 1. ÖNCEKİ DÖNEMDEN DEVREDENİ HESAPLA
-    # Veritabanındaki seçilen aydan önceki tüm işlemler
     prev_res = supabase.table("muhasebe").select("tur, tutar").lt("tarih", str(start_date)).execute()
-    
     db_prev_balance = 0.0
     for item in prev_res.data:
-        if item['tur'] == 'EINNAHMEN':
-            db_prev_balance += float(item['tutar'])
-        else:
-            db_prev_balance -= float(item['tutar'])
+        db_prev_balance += float(item['tutar']) if item['tur'] == 'EINNAHMEN' else -float(item['tutar'])
     
-    # Toplam Devreden = Senin kodun içine yazdığın sabit + Veritabanındaki eski farklar
     total_opening_balance = INITIAL_CASH_BALANCE + db_prev_balance
 
-    # 2. SEÇİLEN AYIN VERİLERİNİ ÇEK
+    # 2. SEÇİLEN AYIN VERİLERİ
     res = supabase.table("muhasebe").select("*").gte("tarih", str(start_date)).lte("tarih", str(end_date)).order("tarih").execute()
     
     if res.data:
         df_rep = pd.DataFrame(res.data)
-        
-        # PDF Hazırlığı
         pdf = FPDF()
         pdf.add_page()
         pdf.set_font("Arial", "B", 16)
         pdf.cell(190, 10, "KASSENBERICHT", ln=True, align="C")
         pdf.set_font("Arial", "", 11)
-        pdf.cell(190, 10, f"Zeitraum: {start_date.strftime('%d.%m.%Y')} bis {end_date.strftime('%d.%m.%Y')}", ln=True, align="C")
+        pdf.cell(190, 10, f"Monat: {selected_month_name} {selected_year}", ln=True, align="C")
         pdf.ln(10)
 
-        # ÜBERTRAG (DEVREDEN) SATIRI
+        # ÜBERTRAG (DEVREDEN)
         pdf.set_font("Arial", "B", 10)
         pdf.set_fill_color(240, 240, 240)
-        pdf.cell(130, 10, "Vortrag aus dem Vormonat (Devreden Bakiye)", 1, 0, "L", True)
+        pdf.cell(130, 10, f"Vortrag aus dem Vormonat", 1, 0, "L", True)
         pdf.cell(60, 10, f"{total_opening_balance:.2f} EUR", 1, 1, "R", True)
         pdf.ln(2)
 
@@ -105,35 +106,43 @@ if st.button("PDF Bericht Generieren"):
             pdf.cell(25, 8, str(row['tarih']), 1)
             pdf.cell(30, 8, str(row['belge_no']), 1)
             pdf.cell(75, 8, str(row['aciklama'])[:40], 1)
-            
             val = float(row['tutar'])
             if row['tur'] == 'EINNAHMEN':
-                pdf.cell(30, 8, f"{val:.2f}", 1, 0, "R")
-                pdf.cell(30, 8, "-", 1, 0, "R")
+                pdf.cell(30, 8, f"{val:.2f}", 1, 0, "R"); pdf.cell(30, 8, "-", 1, 0, "R")
                 m_in += val
             else:
-                pdf.cell(30, 8, "-", 1, 0, "R")
-                pdf.cell(30, 8, f"{val:.2f}", 1, 0, "R")
+                pdf.cell(30, 8, "-", 1, 0, "R"); pdf.cell(30, 8, f"{val:.2f}", 1, 0, "R")
                 m_out += val
             pdf.ln()
 
-        # ÖZET VE KAPANIŞ (ENDBESTAND)
+        # ÖZET
         pdf.ln(5)
-        pdf.set_font("Arial", "B", 10)
         closing_balance = total_opening_balance + m_in - m_out
-
-        pdf.cell(130, 8, "Summe Einnahmen (Bu Ay Toplam Gelir):", 0)
-        pdf.cell(60, 8, f"+ {m_in:.2f} EUR", 0, 1, "R")
-        pdf.cell(130, 8, "Summe Ausgaben (Bu Ay Toplam Gider):", 0)
-        pdf.cell(60, 8, f"- {m_out:.2f} EUR", 0, 1, "R")
+        pdf.set_font("Arial", "B", 10)
+        pdf.cell(130, 8, "Summe Einnahmen:", 0); pdf.cell(60, 8, f"+ {m_in:.2f} EUR", 0, 1, "R")
+        pdf.cell(130, 8, "Summe Ausgaben:", 0); pdf.cell(60, 8, f"- {m_out:.2f} EUR", 0, 1, "R")
         pdf.line(10, pdf.get_y(), 200, pdf.get_y())
-        pdf.set_font("Arial", "B", 11)
-        pdf.cell(130, 10, "Endbestand (Gelecek Aya Devreden):", 0)
-        pdf.cell(60, 10, f"{closing_balance:.2f} EUR", 0, 1, "R")
+        pdf.cell(130, 10, "Endbestand:", 0); pdf.cell(60, 10, f"{closing_balance:.2f} EUR", 0, 1, "R")
 
-        # İndirme Butonu
         pdf_output = bytes(pdf.output())
-        st.download_button(label="📥 Bericht herunterladen", data=pdf_output, 
-                           file_name=f"Kassenbericht_{selected_month}_{selected_year}.pdf", mime="application/pdf")
+        st.download_button(label=f"📥 {selected_month_name} Bericht PDF", data=pdf_output, file_name=f"Kassenbericht_{selected_month_name}.pdf")
     else:
         st.warning("Keine Daten gefunden.")
+
+# --- AKTUELLER MONAT LİSTESİ (SADECE BU AYIN KAYITLARI) ---
+st.divider()
+st.subheader(f"Buchungen im {GERMAN_MONTHS[today.month]}")
+
+# Sadece mevcut ayın başlangıcından sonuna kadar olanları getir
+current_month_start = today.replace(day=1)
+response = supabase.table("muhasebe").select("*").gte("tarih", str(current_month_start)).order("tarih", desc=True).execute()
+
+if response.data:
+    df_list = pd.DataFrame(response.data)
+    df_list['tarih'] = pd.to_datetime(df_list['tarih']).dt.strftime('%d.%m.%Y')
+    # Sütun isimlerini kullanıcı için güzelleştirelim
+    df_display = df_list[['tarih', 'belge_no', 'tur', 'aciklama', 'tutar']].copy()
+    df_display.columns = ['Datum', 'Beleg Nr', 'Typ', 'Beschreibung', 'Betrag (€)']
+    st.dataframe(df_display, use_container_width=True)
+else:
+    st.info("Noch keine Buchungen in diesem Monat.")
