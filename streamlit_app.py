@@ -12,7 +12,7 @@ url = st.secrets["SUPABASE_URL"]
 key = st.secrets["SUPABASE_KEY"]
 supabase = create_client(url, key)
 
-st.title("📊 Einnahmen & Ausgaben")
+st.title("a-gala Einnahmen & Ausgaben")
 
 # --- VERİ GİRİŞİ (ALMANCA) ---
 with st.form("kayit_formu", clear_on_submit=True):
