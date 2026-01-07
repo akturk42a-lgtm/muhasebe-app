@@ -123,4 +123,38 @@ if st.button("PDF Bericht Generieren"):
         pdf.set_font("Arial", "B", 10)
         # Gesamteinnahmen & Gesamtausgaben
         pdf.cell(130, 8, " Gesamteinnahmen (Bu Ay Toplam Gelir):", 0)
-        pdf.cell(60, 8, f"+ {m_in:.2f} EUR",
+        pdf.cell(60, 8, f"+ {m_in:.2f} EUR", 0, 1, "R")
+        pdf.cell(130, 8, " Gesamtausgaben (Bu Ay Toplam Gider):", 0)
+        pdf.cell(60, 8, f"- {m_out:.2f} EUR", 0, 1, "R")
+        
+        # Alt Çizgi
+        pdf.set_draw_color(0, 0, 0)
+        pdf.line(10, pdf.get_y(), 200, pdf.get_y())
+        pdf.ln(2)
+
+        # Kapanış Bakiyesi Vurgusu
+        pdf.set_font("Arial", "B", 12)
+        pdf.set_text_color(0, 0, 0)
+        pdf.cell(130, 10, " ENDBESTAND (Kassenbestand am Monatsende):", 0)
+        pdf.cell(60, 10, f"{closing_balance:.2f} EUR", 0, 1, "R")
+
+        pdf_output = bytes(pdf.output())
+        st.download_button(label=f"📥 {selected_month_name} Bericht PDF", data=pdf_output, file_name=f"Kassenbericht_{selected_month_name}.pdf")
+    else:
+        st.warning("Keine Daten gefunden.")
+
+# --- AKTUELLER MONAT LİSTESİ ---
+st.divider()
+st.subheader(f"Buchungen im {GERMAN_MONTHS[today.month]}")
+
+current_month_start = today.replace(day=1)
+response = supabase.table("muhasebe").select("*").gte("tarih", str(current_month_start)).order("tarih", desc=True).execute()
+
+if response.data:
+    df_list = pd.DataFrame(response.data)
+    df_list['tarih'] = pd.to_datetime(df_list['tarih']).dt.strftime('%d.%m.%Y')
+    df_display = df_list[['tarih', 'belge_no', 'tur', 'aciklama', 'tutar']].copy()
+    df_display.columns = ['Datum', 'Beleg Nr', 'Typ', 'Beschreibung', 'Betrag (€)']
+    st.dataframe(df_display, use_container_width=True)
+else:
+    st.info("Noch keine Buchungen in diesem Monat.")
