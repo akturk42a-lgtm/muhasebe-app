@@ -20,7 +20,7 @@ with st.form("kayit_formu", clear_on_submit=True):
     belge_no = st.text_input("BELEG")
     tur = st.selectbox("Vorgangstyp", ["EINNAHMEN", "AUSGABEN"])
     aciklama = st.text_input("GESCHÄFTSVORGANG KASSENBESTAND")
-    tutar = st.number_input("Betrag (€)", min_value=0.0, step=0.01)
+    tutar = st.number_input("BETRAG (€)", min_value=0.0, step=0.01)
     submit = st.form_submit_button("Speichern")
 
     if submit:
