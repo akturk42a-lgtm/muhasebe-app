@@ -4,10 +4,10 @@ import datetime
 import pandas as pd
 from fpdf import FPDF
 
-# Sayfa Ayarları
+# --- SAYFA AYARLARI ---
 st.set_page_config(page_title="Aktürk Buchhaltung", page_icon="📊")
 
-# Supabase Bağlantısı
+# --- SUPABASE BAĞLANTISI ---
 url = st.secrets["SUPABASE_URL"]
 key = st.secrets["SUPABASE_KEY"]
 supabase = create_client(url, key)
@@ -24,6 +24,7 @@ with st.form("kayit_formu", clear_on_submit=True):
     submit = st.form_submit_button("Speichern")
 
     if submit:
+        # Veritabanına bu anahtarlarla kaydediyoruz
         data = {"tarih": str(tarih), "belge_no": belge_no, "tur": tur, "aciklama": aciklama, "tutar": tutar}
         supabase.table("muhasebe").insert(data).execute()
         st.success(f"Gespeichert: {tutar} €")
@@ -54,7 +55,7 @@ if st.button("PDF Generieren"):
         pdf.cell(190, 10, f"Zeitraum: {start_date} bis {end_date}", ln=True, align="C")
         pdf.ln(10)
 
-        # Tablo Başlıkları
+        # --- TABLO BAŞLIKLARI (Görünen Kısım) ---
         pdf.set_font("Arial", "B", 10)
         pdf.cell(30, 10, "Datum", 1)
         pdf.cell(40, 10, "Beleg-Nr", 1)
@@ -63,19 +64,19 @@ if st.button("PDF Generieren"):
         pdf.cell(30, 10, "Betrag", 1)
         pdf.ln()
 
-        # Tablo Verileri
+        # --- TABLO VERİLERİ (Veritabanı Anahtarları) ---
         pdf.set_font("Arial", "", 10)
         for index, row in df_rep.iterrows():
-            pdf.cell(30, 10, str(row['DATUM']), 1)
-            pdf.cell(40, 10, str(row['BELEG']), 1)
-            pdf.cell(30, 10, str(row['VERFAHRENSTYP']), 1)
-            pdf.cell(60, 10, str(row['BESCHREIBUNG'])[:25], 1) # Uzun açıklamaları keser
-            pdf.cell(30, 10, f"{row['BETRAG']} Euro", 1)
+            # 'row' içindeki isimler veritabanındaki (data sözlüğündeki) isimlerle aynı olmalı
+            pdf.cell(30, 10, str(row['tarih']), 1)
+            pdf.cell(40, 10, str(row['belge_no']), 1)
+            pdf.cell(30, 10, str(row['tur']), 1)
+            pdf.cell(60, 10, str(row['aciklama'])[:25], 1) 
+            pdf.cell(30, 10, f"{row['tutar']} Euro", 1)
             pdf.ln()
 
         # PDF'i indirilebilir yapma
         pdf_output = bytes(pdf.output())
-
         st.download_button(label="📥 PDF Herunterladen", data=pdf_output, file_name=f"Bericht_{start_date}_{end_date}.pdf", mime="application/pdf")
     else:
         st.warning("Keine Daten für diesen Zeitraum gefunden.")
@@ -86,6 +87,6 @@ st.subheader("Letzte Buchungen")
 response = supabase.table("muhasebe").select("*").order("tarih", desc=True).limit(10).execute()
 if response.data:
     df_list = pd.DataFrame(response.data)
+    # Tarih formatını kullanıcı dostu yapalım (GG.AA.YYYY)
     df_list['tarih'] = pd.to_datetime(df_list['tarih']).dt.strftime('%d.%m.%Y')
     st.dataframe(df_list[['tarih', 'belge_no', 'tur', 'aciklama', 'tutar']], use_container_width=True)
-
