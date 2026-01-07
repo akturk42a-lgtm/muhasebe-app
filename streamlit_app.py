@@ -66,11 +66,11 @@ if st.button("PDF Generieren"):
         # Tablo Verileri
         pdf.set_font("Arial", "", 10)
         for index, row in df_rep.iterrows():
-            pdf.cell(30, 10, str(row['tarih']), 1)
-            pdf.cell(40, 10, str(row['belge_no']), 1)
-            pdf.cell(30, 10, str(row['tur']), 1)
-            pdf.cell(60, 10, str(row['aciklama'])[:25], 1) # Uzun açıklamaları keser
-            pdf.cell(30, 10, f"{row['tutar']} Euro", 1)
+            pdf.cell(30, 10, str(row['DATUM']), 1)
+            pdf.cell(40, 10, str(row['BELEG']), 1)
+            pdf.cell(30, 10, str(row['VERFAHRENSTYP']), 1)
+            pdf.cell(60, 10, str(row['BESCHREIBUNG'])[:25], 1) # Uzun açıklamaları keser
+            pdf.cell(30, 10, f"{row['BETRAG']} Euro", 1)
             pdf.ln()
 
         # PDF'i indirilebilir yapma
