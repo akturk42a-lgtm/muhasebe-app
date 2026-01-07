@@ -122,9 +122,9 @@ if st.button("PDF Bericht Generieren"):
         
         pdf.set_font("Arial", "B", 10)
         # Gesamteinnahmen & Gesamtausgaben
-        pdf.cell(130, 8, " Gesamteinnahmen (Bu Ay Toplam Gelir):", 0)
+        pdf.cell(130, 8, " Gesamteinnahmen:", 0)
         pdf.cell(60, 8, f"+ {m_in:.2f} EUR", 0, 1, "R")
-        pdf.cell(130, 8, " Gesamtausgaben (Bu Ay Toplam Gider):", 0)
+        pdf.cell(130, 8, " Gesamtausgaben:", 0)
         pdf.cell(60, 8, f"- {m_out:.2f} EUR", 0, 1, "R")
         
         # Alt Çizgi
