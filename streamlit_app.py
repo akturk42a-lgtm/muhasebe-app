@@ -16,10 +16,10 @@ st.title("a-gala Einnahmen & Ausgaben")
 
 # --- VERİ GİRİŞİ (ALMANCA) ---
 with st.form("kayit_formu", clear_on_submit=True):
-    tarih = st.date_input("Datum", datetime.date.today())
-    belge_no = st.text_input("Belegnummer / Rechnungsnummer")
-    tur = st.selectbox("Vorgangstyp", ["Einnahme", "Ausgabe"])
-    aciklama = st.text_input("Beschreibung")
+    tarih = st.date_input("DATUM", datetime.date.today())
+    belge_no = st.text_input("BELEG")
+    tur = st.selectbox("Vorgangstyp", ["EINNAHMEN", "AUSGABEN"])
+    aciklama = st.text_input("GESCHÄFTSVORGANG KASSENBESTAND")
     tutar = st.number_input("Betrag (€)", min_value=0.0, step=0.01)
     submit = st.form_submit_button("Speichern")
 
