@@ -74,7 +74,8 @@ if st.button("PDF Generieren"):
             pdf.ln()
 
         # PDF'i indirilebilir yapma
-        pdf_output = pdf.output(dest='S').encode('latin-1')
+        pdf_output = bytes(pdf.output())
+
         st.download_button(label="📥 PDF Herunterladen", data=pdf_output, file_name=f"Bericht_{start_date}_{end_date}.pdf", mime="application/pdf")
     else:
         st.warning("Keine Daten für diesen Zeitraum gefunden.")
