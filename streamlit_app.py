@@ -9,7 +9,7 @@ from calendar import monthrange
 st.set_page_config(page_title="A-Gala Kassenbuch", page_icon="💰")
 
 # --- 🚀 BAŞLANGIÇ BAKİYESİ (BURAYI DEĞİŞTİR) ---
-INITIAL_CASH_BALANCE = 1000.00 
+INITIAL_CASH_BALANCE = 657.08 
 # ----------------------------------------------
 
 GERMAN_MONTHS = {
