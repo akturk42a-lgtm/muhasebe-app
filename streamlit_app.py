@@ -147,7 +147,7 @@ if st.button("PDF Bericht Generieren"):
     else:
         st.warning("Keine Daten gefunden.")
 
-# --- AKTUELLER MONAT LİSTESİ ---
+# --- AKTUELLER MONAT LİSTESİ VE SİLME İŞLEMİ ---
 st.divider()
 st.subheader(f"Buchungen im {GERMAN_MONTHS[today.month]}")
 
@@ -156,9 +156,40 @@ response = supabase.table("muhasebe").select("*").gte("tarih", str(current_month
 
 if response.data:
     df_list = pd.DataFrame(response.data)
-    df_list['tarih'] = pd.to_datetime(df_list['tarih']).dt.strftime('%d.%m.%Y')
-    df_display = df_list[['tarih', 'belge_no', 'tur', 'aciklama', 'tutar']].copy()
+    
+    # Görsel Tablo
+    df_display = df_list.copy()
+    df_display['tarih'] = pd.to_datetime(df_display['tarih']).dt.strftime('%d.%m.%Y')
+    df_display = df_display[['tarih', 'belge_no', 'tur', 'aciklama', 'tutar']]
     df_display.columns = ['Datum', 'Beleg Nr', 'Typ', 'Beschreibung', 'Betrag (€)']
     st.dataframe(df_display, use_container_width=True)
+
+    # --- SİLME BÖLÜMÜ ---
+    with st.expander("🗑️ Buchung Löschen (Hata Düzeltme)"):
+        st.write("Silmek istediğiniz işlemin açıklamasını seçin:")
+        
+        # Silinecek kaydı seçmek için bir liste oluşturuyoruz
+        # Format: "Tarih - Açıklama - Tutar" şeklinde görünecek
+        delete_options = {
+            f"{row['tarih']} | {row['aciklama']} | {row['tutar']}€": row['id'] 
+            for _, row in df_list.iterrows()
+        }
+        
+        selected_to_delete = st.selectbox("Löschen seçeneği:", options=list(delete_options.keys()))
+        
+        # Onay Kutusu
+        confirm_delete = st.checkbox("Evet, bu kaydı kalıcı olarak silmek istiyorum.")
+        
+        if st.button("Seçili Kaydı Sil", type="primary"):
+            if confirm_delete:
+                record_id = delete_options[selected_to_delete]
+                try:
+                    supabase.table("muhasebe").delete().eq("id", record_id).execute()
+                    st.success("Buchung erfolgreich gelöscht!")
+                    st.rerun() # Sayfayı yenileyerek listeyi günceller
+                except Exception as e:
+                    st.error(f"Hata oluştu: {e}")
+            else:
+                st.warning("Lütfen silme işlemini onaylamak için kutucuğu işaretleyin.")
 else:
     st.info("Noch keine Buchungen in diesem Monat.")
