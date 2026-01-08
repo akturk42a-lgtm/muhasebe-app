@@ -116,14 +116,18 @@ if st.button("PDF Bericht Generieren"):
                 m_out += val
             pdf.ln()
 
-        # ÖZET BÖLÜMÜ
+        # --- ÖZET BÖLÜMÜ GÜNCELLEME ---
         pdf.ln(5)
         closing_balance = total_opening_balance + m_in - m_out
         
         pdf.set_font("Arial", "B", 10)
-        # Gesamteinnahmen & Gesamtausgaben
-        pdf.cell(130, 8, " Gesamteinnahmen:", 0)
-        pdf.cell(60, 8, f"+ {m_in:.2f} EUR", 0, 1, "R")
+        
+        # Değişiklik burada: Gesamteinnahmen artık devreden bakiye + bu ayın gelirlerini kapsıyor
+        display_total_in = total_opening_balance + m_in 
+        
+        pdf.cell(130, 8, " Gesamteinnahmen (inkl. Vortrag):", 0) # Başlığı isteğe bağlı güncelleyebilirsiniz
+        pdf.cell(60, 8, f"+ {display_total_in:.2f} EUR", 0, 1, "R") 
+        
         pdf.cell(130, 8, " Gesamtausgaben:", 0)
         pdf.cell(60, 8, f"- {m_out:.2f} EUR", 0, 1, "R")
         
